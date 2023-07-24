@@ -21,11 +21,14 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: ${{ matrix.node-version }}
-      - working-directory: ./server
-      - run: npm install
-      - working-directory: ./client
-      - run: npm install
-      - working-directory: ./
-      - run: npm install
-      - run: npm run dev
+      - name: server
+        working-directory: ./server
+        run: npm install
+      - name: client
+        working-directory: ./client
+        run: npm install
+      - name: both
+        working-directory: ./
+        run: npm install
+        run: npm run dev
 
