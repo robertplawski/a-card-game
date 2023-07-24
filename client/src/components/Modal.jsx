@@ -1,7 +1,7 @@
 import React, { useState, useRef, forwardRef, createContext, useContext } from "react";
 import { SubtitleText } from "../components/Text.jsx";
 import { BaseButton } from "../components/Button.jsx"
-import { IconX, IconCircle, IconAlertTriangle, IconQuestionMark } from '@tabler/icons-react';
+import { IconX, IconCircle, IconAlertTriangle, IconQuestionMark, IconTrophy} from '@tabler/icons-react';
 import { motion, AnimatePresence } from 'framer-motion'
 
 export function BaseModal(props){
@@ -36,9 +36,14 @@ export function BaseModal(props){
             exit={{'scale': 0}}
             className="p-6 pointer-events-auto flex-wrap-reverse justify-center items-center bg-white z-50 rounded-xl text-3xl flex gap-8 flex-row drop-shadow-sharp-sm"
           >
-            <div className="flex justify-center items-center">
+            {(typeof(icon) == "string") ?
+            <div dangerouslySetInnerHTML={{__html:icon}} className="flex justify-center items-center">
+        
+            </div>
+            : <div className="flex justify-center items-center">
               {icon}
             </div>
+            }
             <div className="flex flex-col gap-4">
               <div className="flex flex-row gap-8 justify-between">
                 <div className="font-bold flex items-center">
@@ -70,7 +75,7 @@ export function ModalContextProvider({children}){
   };
   const closeModal = () => setModal(undefined);
 
-  return  <ModalContext.Provider value={{openModal,modal,modal, closeModal}}>
+  return  <ModalContext.Provider value={{openModal,modal, closeModal}}>
     {children}
     <AnimatePresence>
       { (modal) && (

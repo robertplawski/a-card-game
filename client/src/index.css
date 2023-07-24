@@ -38,6 +38,9 @@
 #root{
   max-height: 100vh;
 }
+.ti{
+  font-size:2em;
+}
 ::-webkit-scrollbar {
   height: 0.4em;
 }

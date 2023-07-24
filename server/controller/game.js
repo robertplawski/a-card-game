@@ -1,73 +1,58 @@
 const gameState = {};
-const { sendError, sendAlert } = require("../utils/utils.js");
+const { showCustomModal, sendError, sendAlert, findStateByPlayer, getPlayerIndexById} = require("../utils/utils.js");
 const { getRoom } = require("./room.js");
 const {
   drawRandomCards,
   drawRandomCard,
 } = require("../game/drawRandomCard.js");
 const { Action } = require("../game/cards.js");
-const { isMoveValid } = require("../game/gameLogic.js");
+const { isMoveValid, cardEffect, nextTurn, handlePlay, getValidMoves, validatePlayersCards} = require("../game/gameLogic.js");
 
-const gameExists = () => false;
-
-const getNextPlayer = (game) => {
-  const { players, turn, clockwise } = game;
-  let index = 0;
-  for (const player of players) {
-    if (player.id == turn.player_id) {
-      return players[(clockwise ? index + 1 : index - 1) % players.length];
-      break;
-    }
-    index++;
-  }
-};
-
-const nextTurn = (game) => {
-  let output;
-  if (!game.turn) {
-    output = { player_id: game.players[0].id };
-  } else {
-    output = { player_id: getNextPlayer(game).id };
-  }
-  return output;
-};
+const gameExists = (code) =>  Object.keys(gameState).includes(code)
 
 const GameController = (io, socket) => {
+  const playerWon = () => {
+    showCustomModal(socket,{
+      title: "Congratulations!",
+      children:"You win!",
+      type:"custom",
+      icon:'<i class="ti ti-trophy"></i>',
+      canClose: true,
+      closeCallback: "()=>{closeModal()}"
+    });
+    return;
+  }
+
+  const gameWon = (game) => {
+    const { code } = game;
+    io.to(code).emit("gameWon", game)
+    return;
+  }
+
   socket.on("makeMove", (data) => {
-    const { action, game, myself } = data;
+    let { action, game, myself } = data;
     const { card } = action;
     console.log(action);
     if (action.type == Action.Play) {
-      console.log(card, game.discardPile);
       if (!isMoveValid(card, game.discardPile)) {
         sendAlert(socket, "Invalid move");
         return;
       }
-      game.turn = nextTurn(game);
-      game.players.map((player) => {
-        if (player.id == myself.id) {
-          // improve this pls
-          player.deck = player.deck.filter(
-            (thisCard) => JSON.stringify(thisCard) !== JSON.stringify(card)
-          );
-        }
-      });
-      console.log(card.symbol, card.color);
-      const newCard = { ...card };
-      if (newCard.symbol >= 4)
-        newCard.color = Math.floor(Math.random() * 4) + 1;
-      console.log(newCard.color, "COLOR NEWCARD");
-      game.discardPile = newCard;
-      io.to(game.code).emit("updateState", game);
+      game = handlePlay(card, game, myself, playerWon, (game)=>gameWon(game));
+      game = validatePlayersCards(game);
+      io.to(game.code).emit("updateState", game );
     }
     if (action.type == Action.Draw) {
-      const { game } = data;
+      let { game } = data;
       game.players.map((player) => {
         if (player.id == myself.id) {
           player.deck.push(drawRandomCard());
         }
+        player.deck = getValidMoves(player.deck, game.discardPile) 
+        return player
       });
-      game.turn = nextTurn(game);
+      game.turn = nextTurn(game);    
+      game = validatePlayersCards(game);
       io.to(game.code).emit("updateState", game);
     }
   });
@@ -77,7 +62,7 @@ const GameController = (io, socket) => {
       gameState[code] = room;
       console.log(room);
     }
-    const game = gameState[code];
+    let game = gameState[code];
     if (game.players.length == 0) {
       // Change to 1 please
       sendAlert(socket, "Not enough players");
@@ -88,11 +73,31 @@ const GameController = (io, socket) => {
       return player;
     });
     game.discardPile = drawRandomCard();
+    game.discardPile.valid = true;
     game.started = true;
     game.clockwise = true;
-    game.turn = nextTurn(game);
+    game.turn = nextTurn(game);     
+    game = validatePlayersCards(game);
     io.to(game.code).emit("updateState", game);
-    io.to(game.code).emit("gameTurn", game.turn);
+  });
+
+  const deleteGame = (code) => {
+    delete gameState[code];
+    io.to(code).emit("deleteRoom", "");
+  }
+
+  socket.on("disconnect", () => {
+    const room = findStateByPlayer(gameState, socket.id);
+    if (!room) return;
+    const { code } = room;
+    if (room.owner_id == socket.id) {
+      deleteGame(code)
+      return;
+    }
+    const playerIndex = getPlayerIndexById(room.players, socket.id); //room.players.indexOf(socket.id)
+    console.log(playerIndex);
+    room.players.splice(playerIndex, 1);
+    io.to(room.code).emit("updateState", room);
   });
 };
 

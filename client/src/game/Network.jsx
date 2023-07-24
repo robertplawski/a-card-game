@@ -3,20 +3,24 @@ import { socket } from '../socket';
 import { useParams } from 'react-router-dom';
 import { PromptModal, AlertModal} from '../components/Modal.jsx'
 import { IconLoader2, IconUser, IconUsers, IconCrown} from "@tabler/icons-react";
-import {ModalContextProvider, ModalContext} from "../components/Modal.jsx";
-
+import { ModalContextProvider, ModalContext} from "../components/Modal.jsx";
 export const NetworkContext = createContext()
 
 export function NetworkContextProvider({children}){
   const [myself, setMyself] = useState();
   const [room, setRoom] = useState();
   const { roomCode } = useParams();
-  
   const {openModal, closeModal} = useContext(ModalContext);
-
+  const redirect = (url) => location.pathname = url;
   const gameStarted = () => {
     if(!room) return
     return room.started
+  }
+
+  const showCustomModal = (modal) => {
+    openModal({...modal, closeCallback: ()=>{
+      closeModal();
+    }})
   }
 
   const showPrompt = (prompt, submitCallback) => { // A function that shows a prompt modal
@@ -36,7 +40,7 @@ export function NetworkContextProvider({children}){
       type:"alert",
       closeCallback: ()=>{
         closeModal();
-        setTimeout(()=>location.pathname="/", 300)
+        setTimeout(()=>redirect("/"), 300)
       },
       canClose: true
     });
@@ -86,6 +90,7 @@ export function NetworkContextProvider({children}){
       showError(error)    
     }) 
     socket.on("alert", (alert)=>showAlert(alert)) // Show an alert
+    socket.on("customModal", (modal)=>showCustomModal(modal)) // Show custom modal
   },[roomCode]) // When room code changes 
 
   useEffect(()=>{
@@ -100,9 +105,7 @@ export function NetworkContextProvider({children}){
     showPrompt("What's your name?", (val)=>submitName(val))
   }, [myself])
 
-  
-
-  return <NetworkContext.Provider value={{myself, room, roomCode, getPlayerById, gameStarted, showPrompt, showError, showAlert}}>
+   return <NetworkContext.Provider value={{myself, room, roomCode, getPlayerById, gameStarted, showPrompt, showError, showAlert, showCustomModal}}>
       <div
       className="bg-blue-400 p-8 w-screen h-screen flex justify-center items-center">
       {children}

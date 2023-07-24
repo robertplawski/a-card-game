@@ -59,9 +59,9 @@ const generateSpecials = () => {
 const generateCards = () => {
   return [
     ...generateNumbers(),
-    ...generateSpecials(),
-    { symbol: 4 },
-    { symbol: 5 },
+    //...generateSpecials(),
+    //{ symbol: 4 },
+    //{ symbol: 5 },
   ];
 };
 

@@ -1,13 +1,13 @@
 import { NetworkContext } from "./Network";
 import { useEffect, useState, useContext } from "react";
 import { PlayingCard, BaseCard } from "../components/Card"
-import {IconCircleOff} from "@tabler/icons-react";
+import {IconCircleOff, IconTrophy} from "@tabler/icons-react";
 import { socket } from "../socket";
 import { AnimatePresence } from "framer-motion";
-
+import {ModalContext} from "../components/Modal.jsx"
 export function Player(props){
   const { room, myself } = useContext(NetworkContext);
-  const {name = "name", deck = [], isMe=false, turn=false} = props;
+  const {name = "name", deck = [], isMe=false, turn=false, won=false} = props;
 
   const makeMove = (card) => {
     if(!turn) return;
@@ -19,7 +19,7 @@ export function Player(props){
   }
 
   const parseDeck = () =>{
-    if(isMe){
+    if(isMe && !won){
       return deck.map((card, index)=>
         (<PlayingCard 
           card={card}
@@ -38,15 +38,17 @@ export function Player(props){
   }
 
   return (<>
-      <div className={`font-bold justify-center flex ${(turn) ? "text-white" : "text-neutral-600"} text-lg`}>
+      <div className="bg-black w-96 absolute"/>
+      <div className={`font-bold justify-center flex ${(turn && !won) && "text-white"} ${(!turn && !won) && "text-neutral-600"} ${(won) && "text-yellow-300"} text-lg`}>
         {name}
         {(isMe) && " (you)"}
       </div>
       <div className={`bg-neutral-300 ${(turn) ? "" :"saturate-[0.4] brightness-[0.4]"} py-2 rounded-2xl drop-shadow-sharp-sm`}>
       <div className="p-4 min-h-[10rem] flex-wrap max-h-[10rem] h-[10rem] overflow-y-auto rounded-xl text-sm w-[100%] flex flex-row gap-4">
-        <AnimatePresence>
+        {(!won) ? <AnimatePresence>
           {parseDeck()}
         </AnimatePresence>
+        : <div className="flex justify-center items-center w-full text-2xl font-bold text-neutral-400"><IconTrophy size={"2em"}/></div>}
         </div>
       </div>
       </>)
@@ -73,7 +75,7 @@ function PlayerDecks(props){
     currentPosition.rotate += calcAngles(amountOfVertices)
     result.push(
     <div className="relative flex justify-center items-center" style={{...currentPosition, width:0,height:0}}>
-      <div    className="flex flex-col gap-2"
+        <div    className="flex flex-col gap-2"
       style={{minWidth:calcSize(amountOfVertices*0.95), height:currentPosition.height, rotate: currentPosition.rotate+'deg', transform: `translate(${tableOffset}px, 0px) rotate(270deg)`}} 
     >
       <Player key={players.indexOf(player)} turn={player.id==room.turn.player_id} isMe={myself==player} {...player}/>
@@ -90,7 +92,7 @@ function PlayerDecks(props){
 function Table(){
   const {room, getPlayerById, myself} = useContext(NetworkContext); 
   const drawCard = () => {
-    if(room.turn.player_id != myself.id) return;
+    if(room.turn.player_id != myself.id || myself.won) return;
     socket.emit("makeMove", {
       action: {type: 0},
       game: room,
@@ -101,7 +103,7 @@ function Table(){
     <div className="bg-gray-500 p-4 gap-4 flex flex-col justify-center text-white items-center font-bold rounded-xl drop-shadow-sharp-sm">
       <div className="flex flex-row gap-4">
         <PlayingCard card={room.discardPile}/>
-        <BaseCard onClick={()=>drawCard()} centerSymbol="draw" className="bg-neutral-800 cursor-pointer text-[0.6em]"/>
+        <BaseCard onClick={()=>drawCard()} centerSymbol="draw" className="bg-neutral-800 cursor-pointer text-[0.5em]"/>
       </div>
       <p>{getPlayerById(room.turn.player_id).name}&apos;s turn</p>
     </div>
@@ -110,6 +112,18 @@ function Table(){
 }
 
 export function Game(){
+  const {room, myself} = useContext(NetworkContext);
+  const {modal, openModal, closeModal} = useContext(ModalContext);
+  const redirect = (url) => location.pathname = url;
+  useEffect(()=>{
+    if(room.won && !modal){
+      openModal({icon:"<i class='ti ti-play-card'></i>",title:"Game ended!",children:(myself.won) ? "You win!" : "You lose!", closeCallback: ()=>{
+        closeModal();
+        setTimeout(()=>redirect("/"),300);
+      }})
+      return;
+    }
+  }, [room, openModal, closeModal, modal, myself])
   return <Table/>
 }
 

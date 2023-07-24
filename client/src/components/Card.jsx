@@ -36,5 +36,5 @@ export function PlayingCard(props){
   onClick={onClick}
   color={(card.symbol >= 4 && !card.color) ? Color[4] : Color[card.color]} 
   symbol={(card.symbol > 0) ? Symbol[card.symbol] : card.value}
-  className={`min-w-[4rem] ${className || ""}`}/>
+  className={`min-w-[4rem] ${!card.valid && "saturate-[0.4] brightness-[0.4]"} ${className || ""}`}/>
 }

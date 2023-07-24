@@ -1,20 +1,10 @@
 const roomState = {};
-const { sendError, sendAlert } = require("../utils/utils.js");
+const { sendError, sendAlert, findStateByPlayer, getPlayerIndexById} = require("../utils/utils.js");
 
 const getRoom = (code) => {
   const room = roomState[code];
   return room;
 };
-
-const findRoomByPlayer = (id) => {
-  if (roomState == {}) return;
-  for (const [key, room] of Object.entries(roomState)) {
-    if (room.players.some((player) => player.id == id)) return room;
-  }
-
-  return;
-};
-
 const generateRoomCode = () => {
   console.log(Object.keys(roomState));
   while (true) {
@@ -33,15 +23,6 @@ const validRoomCode = (code) => {
 
 const roomExists = (code) => {
   return Boolean(roomState[code]);
-};
-
-const getPlayerIndexById = (players, id) => {
-  let i = 0;
-  for (const player of players) {
-    if (player.id == id) return i;
-    i++;
-  }
-  return -1;
 };
 
 const isNameDuplicate = (players, name) => {
@@ -124,7 +105,7 @@ const RoomController = (io, socket) => {
   });
 
   socket.on("updatedPlayer", (data) => {
-    const room = findRoomByPlayer(data.id);
+    const room = findStateByPlayer(roomState, data.id);
     if (room == undefined) return;
     //console.log(room);
     const playerIndex = getPlayerIndexById(room.players, data.id);
@@ -166,8 +147,8 @@ const RoomController = (io, socket) => {
   });
 
   socket.on("disconnect", () => {
-    const room = findRoomByPlayer(socket.id);
-    if (room == undefined) return;
+    const room = findStateByPlayer(roomState, socket.id);
+    if (!room) return;
     const { code } = room;
     if (room.owner_id == socket.id) {
       delete roomState[code];
