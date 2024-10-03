@@ -37,22 +37,6 @@ const RoomController = (io, socket) => {
 
   socket.on("exists", (code) => {
     code = Number(code);
-    if (code == 2137) {
-      sendError(socket, "...");
-      return;
-    }
-    if (code == 997) {
-      sendError(socket, "ten numer to klopoty");
-      return;
-    }
-    if (code == 1337) {
-      sendError(socket, "haxor");
-      return;
-    }
-    if (code == 420) {
-      sendError(socket, "blaze it");
-      return;
-    }
     if (!validRoomCode(code)) {
       sendError(socket, "Invalid room code");
       return;
